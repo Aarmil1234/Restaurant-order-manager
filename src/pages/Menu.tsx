@@ -5,6 +5,8 @@ import { OrderSummary } from "@/components/OrderSummary";
 import { OrderToken } from "@/components/OrderToken";
 import { Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabaseClient";
+
 
 // Import food images
 import burgerImage from "@/assets/burger.jpg";
@@ -84,19 +86,45 @@ export const Menu = () => {
     });
   };
 
-  const handlePlaceOrder = () => {
-    const token = generateOrderToken();
-    setOrderToken(token);
-    
-    // Here you would typically save the order to your backend
-    // For now, we'll just log it
-    console.log('Order placed:', {
-      token,
-      items: orderItems,
-      total: orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      timestamp: new Date()
-    });
-  };
+  const handlePlaceOrder = async () => {
+  if (orderItems.length === 0) {
+    alert("Please select at least one item.");
+    return;
+  }
+
+  const token = generateOrderToken();
+  const total = orderItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  // Insert order into Supabase
+  const { data, error } = await supabase
+    .from('orders')
+    .insert([
+      { token, status: 'current', total }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to place order:", error);
+    alert("Failed to place order. Try again.");
+    return;
+  }
+
+  console.log("Order placed:", data);
+
+  // Optionally, insert order_items if you have that table
+  // for (const item of orderItems) {
+  //   await supabase.from('order_items').insert([
+  //     { order_token: token, menu_item_id: item.id, quantity: item.quantity, price: item.price }
+  //   ]);
+  // }
+
+  setOrderToken(token);
+};
+
 
   const handleNewOrder = () => {
     setOrderToken(null);

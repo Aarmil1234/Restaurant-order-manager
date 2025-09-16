@@ -1,68 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminPanel, Order } from "@/components/AdminPanel";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabaseClient"
 
 export const Admin = () => {
-  // Mock data - in a real app, this would come from your backend
-  const [currentOrders, setCurrentOrders] = useState<Order[]>([
-    {
-      token: "12345",
-      items: [
-        { id: 1, name: "Classic Burger", price: 12.99, quantity: 2 },
-        { id: 3, name: "Caesar Salad", price: 9.99, quantity: 1 }
-      ],
-      timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-      total: 35.97
-    },
-    {
-      token: "67890",
-      items: [
-        { id: 2, name: "Margherita Pizza", price: 14.99, quantity: 1 },
-        { id: 4, name: "Pasta Carbonara", price: 16.99, quantity: 1 }
-      ],
-      timestamp: new Date(Date.now() - 8 * 60 * 1000), // 8 minutes ago
-      total: 31.98
-    }
-  ]);
+  const [currentOrders, setCurrentOrders] = useState<Order[]>([]);
+  const [preparedOrders, setPreparedOrders] = useState<Order[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
 
-  const [preparedOrders, setPreparedOrders] = useState<Order[]>([
-    {
-      token: "54321",
-      items: [
-        { id: 2, name: "Margherita Pizza", price: 14.99, quantity: 2 }
-      ],
-      timestamp: new Date(Date.now() - 25 * 60 * 1000), // 25 minutes ago
-      total: 29.98
-    }
-  ]);
+  useEffect(() => {
+  async function fetchOrders() {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*');
 
-  const [completedOrders, setCompletedOrders] = useState<Order[]>([
-    {
-      token: "98765",
-      items: [
-        { id: 1, name: "Classic Burger", price: 12.99, quantity: 1 },
-        { id: 3, name: "Caesar Salad", price: 9.99, quantity: 2 }
-      ],
-      timestamp: new Date(Date.now() - 45 * 60 * 1000), // 45 minutes ago
-      total: 32.97
-    }
-  ]);
+    if (error) {
+      console.error('Error fetching orders:', error);
+    } else {
+      const orders = data.map(order => ({
+        token: order.token,
+        items: [],  // You can implement this later
+        timestamp: new Date(order.created_at),
+        total: order.total || 0,
+        status: order.status
+      }));
 
-  const handleMarkPrepared = (token: string) => {
-    const order = currentOrders.find(o => o.token === token);
-    if (order) {
-      setCurrentOrders(prev => prev.filter(o => o.token !== token));
-      setPreparedOrders(prev => [...prev, order]);
+      setCurrentOrders(orders.filter(o => o.status === 'current'));
+      setPreparedOrders(orders.filter(o => o.status === 'prepared'));
+      setCompletedOrders(orders.filter(o => o.status === 'received'));
+    }
+  }
+
+  fetchOrders();
+
+  const orderSubscription = supabase
+    .channel('public:orders')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      payload => {
+        console.log('Realtime order change:', payload);
+        fetchOrders();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(orderSubscription);
+  };
+}, []);
+
+
+  const handleMarkPrepared = async (token: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'prepared' })
+      .eq('token', token);
+
+    if (error) {
+      console.error('Error updating to prepared:', error);
     }
   };
 
-  const handleMarkReceived = (token: string) => {
-    const order = preparedOrders.find(o => o.token === token);
-    if (order) {
-      setPreparedOrders(prev => prev.filter(o => o.token !== token));
-      setCompletedOrders(prev => [...prev, order]);
+  const handleMarkReceived = async (token: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'received' })
+      .eq('token', token);
+
+    if (error) {
+      console.error('Error updating to received:', error);
     }
   };
 
@@ -78,9 +87,9 @@ export const Admin = () => {
                 Back to Menu
               </Button>
             </Link>
-            
+
             <div className="h-6 w-px bg-border" />
-            
+
             <div>
               <h1 className="text-xl font-bold text-restaurant-charcoal">
                 Admin Dashboard
