@@ -60,14 +60,14 @@ export const AdminPanel = ({
           {order.items.map((item) => (
             <div key={item.id} className="flex justify-between text-sm">
               <span>{item.name} × {item.quantity}</span>
-              <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+              <span className="font-medium">Rs. {(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
         </div>
         
         <div className="border-t pt-3 flex justify-between items-center">
           <span className="font-semibold text-restaurant-charcoal">
-            Total: ${order.total.toFixed(2)}
+            Total: Rs. {order.total.toFixed(2)}
           </span>
           
           <div className="flex gap-2">

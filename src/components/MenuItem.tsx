@@ -30,7 +30,7 @@ export const MenuItem = ({
         <img
           src={image_url}
           alt={name}
-          className="w-full h-48 object-cover group-hover:scale-110 transition-smooth"
+          className="w-full h-48 object-contain group-hover:scale-110 transition-smooth"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-smooth" />
       </div>
@@ -44,7 +44,7 @@ export const MenuItem = ({
 
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-restaurant-orange">
-              ${price.toFixed(2)}
+              Rs. {price.toFixed(2)}
             </span>
 
             <div className="flex items-center gap-3">

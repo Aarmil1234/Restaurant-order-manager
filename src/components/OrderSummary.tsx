@@ -50,11 +50,11 @@ export const OrderSummary = ({ items, onPlaceOrder }: OrderSummaryProps) => {
               <div className="flex-1">
                 <p className="font-medium text-restaurant-charcoal">{item.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  ${item.price.toFixed(2)} × {item.quantity}
+                  Rs. {item.price.toFixed(2)} × {item.quantity}
                 </p>
               </div>
               <div className="font-semibold text-restaurant-orange">
-                ${(item.price * item.quantity).toFixed(2)}
+                Rs. {(item.price * item.quantity).toFixed(2)}
               </div>
             </div>
           ))}
@@ -63,7 +63,7 @@ export const OrderSummary = ({ items, onPlaceOrder }: OrderSummaryProps) => {
         <div className="border-t pt-4">
           <div className="flex justify-between items-center text-lg font-bold">
             <span className="text-restaurant-charcoal">Total:</span>
-            <span className="text-restaurant-orange">${totalPrice.toFixed(2)}</span>
+            <span className="text-restaurant-orange">Rs. {totalPrice.toFixed(2)}</span>
           </div>
         </div>
         
