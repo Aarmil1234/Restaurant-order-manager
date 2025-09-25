@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export async function placeOrder(orderItems) {
-  const token = Math.floor(10000 + Math.random() * 90000).toString();
+  const token = Math.floor(100 + Math.random() * 900).toString();
   const total = orderItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -22,4 +22,6 @@ export async function placeOrder(orderItems) {
 
   console.log('Order placed successfully:', data);
   return data;
+
+  
 }

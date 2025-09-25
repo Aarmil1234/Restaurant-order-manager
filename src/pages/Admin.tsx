@@ -11,8 +11,50 @@ export const Admin = () => {
   const [currentOrders, setCurrentOrders] = useState<Order[]>([]);
   const [preparedOrders, setPreparedOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
- const [openTableDialog, setOpenTableDialog] = useState(false);
+  const [openTableDialog, setOpenTableDialog] = useState(false);
   const [totalTables, setTotalTables] = useState<number | null>(null);
+
+  const [openSummaryDialog, setOpenSummaryDialog] = useState(false);
+  const [orderSummary, setOrderSummary] = useState<
+    { name: string; totalQuantity: number }[]
+  >([]);
+
+  const fetchOrderSummary = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select(
+          `
+          quantity,
+          menu_items (
+            name
+          )
+        `
+        );
+
+      if (error) throw error;
+
+      // 🔹 Aggregate quantities by item name
+      const summaryMap: Record<string, number> = {};
+      data.forEach((item) => {
+        const itemName = item.menu_items?.name;
+        if (itemName) {
+          summaryMap[itemName] =
+            (summaryMap[itemName] || 0) + item.quantity;
+        }
+      });
+
+      // Convert to array
+      const summaryArray = Object.entries(summaryMap).map(([name, totalQuantity]) => ({
+        name,
+        totalQuantity,
+      }));
+
+      setOrderSummary(summaryArray);
+    } catch (err: any) {
+      console.error("Error fetching order summary:", err);
+    }
+  };
 
   // console.log("currentOrders",currentOrders);
 
@@ -53,14 +95,18 @@ export const Admin = () => {
       const { data, error } = await supabase
         .from("orders")
         .select(`
-    *,
-    order_items (
-      menu_item_id,
-      menu_items (
-        *
+      *,
+      order_items (
+        id,
+        quantity,
+        menu_item_id,
+        menu_items (
+          id,
+          name,
+          price
+        )
       )
-    )
-  `);
+    `);
 
       if (error) {
         console.error("Error fetching orders:", error);
@@ -71,7 +117,7 @@ export const Admin = () => {
         {
           token: order.token,
           items: order.order_items || [], // You can later fetch items if needed
-          table_number: order.table_number, 
+          table_number: order.table_number,
           timestamp: new Date(order.created_at),
           total: order.total || 0,
           status: order.status,
@@ -205,15 +251,23 @@ export const Admin = () => {
       <div className="flex justify-between w-full p-4">
         <div className="heading">
           <h1 className="text-3xl font-bold text-restaurant-charcoal mb-2">
-          Restaurant Admin Panel
-        </h1>
-        <p className="text-muted-foreground">Manage orders and track kitchen workflow</p>
+            Restaurant Admin Panel
+          </h1>
+          <p className="text-muted-foreground">Manage orders and track kitchen workflow</p>
         </div>
-      <div className="flex gap-2">
+        <div className="flex gap-2">
           <Link to="/add-menu">
             <Button>Add Menu Item</Button>
           </Link>
           <Button onClick={() => setOpenTableDialog(true)}>Manage Tables</Button>
+          <Button
+            onClick={() => {
+              fetchOrderSummary();
+              setOpenSummaryDialog(true);
+            }}
+          >
+            Order Summary
+          </Button>
         </div>
       </div>
 
@@ -248,6 +302,37 @@ export const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* ---------------- Order Summary Dialog ---------------- */}
+      <Dialog open={openSummaryDialog} onOpenChange={setOpenSummaryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <h2 className="text-lg font-semibold">Order Summary</h2>
+          </DialogHeader>
+
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {orderSummary.length > 0 ? (
+              orderSummary.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between border-b py-1 text-sm"
+                >
+                  <span>{item.name}</span>
+                  <span className="font-medium">{item.totalQuantity}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No items ordered yet.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setOpenSummaryDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

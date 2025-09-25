@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,15 +38,92 @@ export const AdminPanel = ({
   onMarkReceived,
 }: AdminPanelProps) => {
   // console.log("currentOrders", currentOrders);
+  const [revenueFilter, setRevenueFilter] = useState<"all" | "today" | "yesterday" | "thisMonth" | "prevMonth">("all");
+
+
+
+
+
+  const getFilteredOrders = () => {
+    const now = moment();
+
+    switch (revenueFilter) {
+      case "today":
+        return completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now, "day")
+        );
+
+      case "yesterday":
+        return completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now.clone().subtract(1, "day"), "day")
+        );
+
+      case "thisMonth":
+        return completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now, "month")
+        );
+
+      case "prevMonth":
+        return completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now.clone().subtract(1, "month"), "month")
+        );
+
+      default:
+        return completedOrders;
+    }
+  };
+  const filteredOrders = getFilteredOrders();
+
+  const calculateRevenue = () => {
+    // return filteredOrders.reduce((acc, order) => acc + order.total, 0);
+    const now = moment();
+
+    let filteredOrders = completedOrders;
+
+    switch (revenueFilter) {
+      case "today":
+        filteredOrders = completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now, "day")
+        );
+        break;
+
+      case "yesterday":
+        filteredOrders = completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now.clone().subtract(1, "day"), "day")
+        );
+        break;
+
+      case "thisMonth":
+        filteredOrders = completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now, "month")
+        );
+        break;
+
+      case "prevMonth":
+        filteredOrders = completedOrders.filter((o) =>
+          moment(o.timestamp).isSame(now.clone().subtract(1, "month"), "month")
+        );
+        break;
+
+      default:
+        break;
+    }
+
+    return filteredOrders.reduce((acc, order) => acc + order.total, 0);
+  };
+
+
 
   const OrderCard = ({
     order,
     showPreparedButton = false,
-    showReceivedButton = false
+    showReceivedButton = false,
+    showTableNumber = true
   }: {
     order: Order;
     showPreparedButton?: boolean;
     showReceivedButton?: boolean;
+    showTableNumber?: boolean;
   }) => (
     <Card className="shadow-food-card">
       <CardHeader className="pb-3">
@@ -54,9 +132,11 @@ export const AdminPanel = ({
             <Hash className="h-4 w-4 text-restaurant-orange" />
             Token: {order.token}
           </CardTitle>
-          <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
-          Table: {order.table_number}
-        </span>
+          {showTableNumber && (
+            <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
+              Table: {order.table_number}
+            </span>
+          )}
           <Badge variant="outline" className="text-xs">
             {/* {order.timestamp.toLocaleTimeString()} */}
             {moment(order.timestamp).format("hh:mm:ss A")}
@@ -140,6 +220,7 @@ export const AdminPanel = ({
                   key={order.token}
                   order={order}
                   showPreparedButton={true}
+                  showTableNumber={true}
                 />
               ))}
             </div>
@@ -161,6 +242,7 @@ export const AdminPanel = ({
                   key={order.token}
                   order={order}
                   showReceivedButton={true}
+                  showTableNumber={true}
                 />
               ))}
             </div>
@@ -168,7 +250,53 @@ export const AdminPanel = ({
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-4">
-          {completedOrders.length === 0 ? (
+          {/* Total Revenue for Completed Orders */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={revenueFilter === "all" ? "default" : "outline"}
+              onClick={() => setRevenueFilter("all")}
+            >
+              All
+            </Button>
+            <Button
+              variant={revenueFilter === "today" ? "default" : "outline"}
+              onClick={() => setRevenueFilter("today")}
+            >
+              Today
+            </Button>
+            <Button
+              variant={revenueFilter === "yesterday" ? "default" : "outline"}
+              onClick={() => setRevenueFilter("yesterday")}
+            >
+              Yesterday
+            </Button>
+            <Button
+              variant={revenueFilter === "thisMonth" ? "default" : "outline"}
+              onClick={() => setRevenueFilter("thisMonth")}
+            >
+              This Month
+            </Button>
+            <Button
+              variant={revenueFilter === "prevMonth" ? "default" : "outline"}
+              onClick={() => setRevenueFilter("prevMonth")}
+            >
+              Previous Month
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-4 flex justify-between items-center">
+              <span className="font-semibold text-lg text-restaurant-charcoal">
+                Total Revenue ({revenueFilter}):
+              </span>
+              <span className="font-bold text-xl text-restaurant-orange">
+                {/* Rs. {completedOrders.reduce((acc, order) => acc + order.total, 0).toFixed(2)} */}
+                Rs. {calculateRevenue().toFixed(2)}
+              </span>
+            </CardContent>
+          </Card>
+
+          {filteredOrders.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -177,12 +305,13 @@ export const AdminPanel = ({
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {completedOrders.map((order) => (
-                <OrderCard key={order.token} order={order} />
+              {filteredOrders.map((order) => (
+                <OrderCard key={order.token} order={order} showTableNumber={false} />
               ))}
             </div>
           )}
         </TabsContent>
+
       </Tabs>
     </div>
   );
