@@ -29,9 +29,11 @@ interface OrderItem extends MenuItemType {
   quantity: number;
 }
 
-const generateOrderToken = (): string => {
-  return Math.floor(10000 + Math.random() * 90000).toString();
+// Generates random number between 100 and 999
+const generateOrderToken = () => {
+  return Math.floor(100 + Math.random() * 900).toString();
 };
+
 
 export const Menu = () => {
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
