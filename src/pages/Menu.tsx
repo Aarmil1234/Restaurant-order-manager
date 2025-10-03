@@ -176,6 +176,29 @@ export const Menu = () => {
       return;
     }
 
+    let { data: session, error: sessionError } = await supabase
+    .from("table_sessions")
+    .select("*")
+    .eq("table_number", selectedTable)
+    .eq("status", "open")
+    .single();
+
+    if (!session) {
+    // 🔹 Create new session if none exists
+    const { data: newSession, error: newSessionError } = await supabase
+      .from("table_sessions")
+      .insert([{ table_number: selectedTable, status: "open" }])
+      .select()
+      .single();
+
+    if (newSessionError) {
+      alert("Failed to create session: " + newSessionError.message);
+      return;
+    }
+    session = newSession;
+  }
+
+
     const token = generateOrderToken();
     const total = orderItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
@@ -189,6 +212,7 @@ export const Menu = () => {
         status: "current",
         total,
         table_number: selectedTable,
+        session_id: session.id,  // 🔸 Link to session
         service_type: "dine-in", // 🔸 mark as dine-in
         created_at: moment().format("YYYY-MM-DDTHH:mm:ss")
       }])

@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 
 export const Admin = () => {
@@ -13,6 +14,9 @@ export const Admin = () => {
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [openTableDialog, setOpenTableDialog] = useState(false);
   const [totalTables, setTotalTables] = useState<number | null>(null);
+  const [openBills, setOpenBills] = useState([]);
+  const navigate = useNavigate();
+
 
   const [openSummaryDialog, setOpenSummaryDialog] = useState(false);
   const [orderSummary, setOrderSummary] = useState<
@@ -88,6 +92,20 @@ export const Admin = () => {
       alert("Failed to save tables: " + err.message);
     }
   };
+
+  useEffect(() => {
+    const fetchBills = async () => {
+      const { data, error } = await supabase
+        .from("table_sessions")
+        .select("id, table_number, orders(*, order_items(*, menu_items(*)))")
+        .eq("status", "open");
+
+      if (!error) setOpenBills(data);
+    };
+
+    fetchBills();
+  }, []);
+
 
   useEffect(() => {
     async function fetchOrders() {
@@ -268,6 +286,13 @@ export const Admin = () => {
           >
             Order Summary
           </Button>
+<Button onClick={() => navigate("/billing")}>
+  Go to Billing
+</Button>
+
+
+
+
         </div>
       </div>
 
