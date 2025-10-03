@@ -200,7 +200,7 @@ const handleToggleStatus = async (id: number, currentStatus: string) => {
             <h2 className="text-lg font-semibold text-restaurant-charcoal mb-6">
               Current Menu Items
             </h2>
-
+            <div className="table-responsive" style={{overflow : "scroll"}}>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100">
@@ -259,6 +259,7 @@ const handleToggleStatus = async (id: number, currentStatus: string) => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </main>

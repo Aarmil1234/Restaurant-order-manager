@@ -18,8 +18,11 @@ export interface Order {
   items: any;
   timestamp: Date;
   total: number;
-  table_number: number; // new
+  table_number: number | null;   // ✅ allow null
+  service_type: "dine-in" | "parcel";
 }
+
+
 
 
 interface AdminPanelProps {
@@ -74,6 +77,8 @@ export const AdminPanel = ({
   };
   const filteredOrders = getFilteredOrders();
 
+
+  
   const calculateRevenue = () => {
     // return filteredOrders.reduce((acc, order) => acc + order.total, 0);
     const now = moment();
@@ -127,22 +132,43 @@ export const AdminPanel = ({
   }) => (
     <Card className="shadow-food-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Hash className="h-4 w-4 text-restaurant-orange" />
-            Token: {order.token}
-          </CardTitle>
-          {showTableNumber && (
-            <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
-              Table: {order.table_number}
-            </span>
-          )}
-          <Badge variant="outline" className="text-xs">
-            {/* {order.timestamp.toLocaleTimeString()} */}
-            {moment(order.timestamp).format("hh:mm:ss A")}
-          </Badge>
-        </div>
-      </CardHeader>
+  <div className="flex items-center justify-between">
+    <CardTitle className="flex items-center gap-2 text-lg">
+      <Hash className="h-4 w-4 text-restaurant-orange" />
+      Token: {order.token}
+    </CardTitle>
+
+    {/* ✅ Show Table or Parcel badge */}
+   {/* ✅ Show Table or Parcel badge with normalization */}
+{/* ✅ Handle all cases: dine-in, parcel, missing service_type */}
+{order.service_type ? (
+  order.service_type.toLowerCase().trim() === "dine-in" && order.table_number ? (
+    <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
+      Table: {order.table_number}
+    </span>
+  ) : order.service_type.toLowerCase().trim() === "parcel" ? (
+    <span className="text-sm font-semibold bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+      Parcel
+    </span>
+  ) : null
+) : order.table_number ? (
+  // Fallback for old dine-in orders
+  <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
+    Table: {order.table_number}
+  </span>
+) : (
+  // Fallback for parcel orders with no service_type and no table number
+  <span className="text-sm font-semibold text-white bg-restaurant-orange px-2 py-1 rounded">
+    Parcel
+  </span>
+)}
+
+    <Badge variant="outline" className="text-xs">
+      {moment(order.timestamp).format("hh:mm:ss A")}
+    </Badge>
+  </div>
+</CardHeader>
+
 
       <CardContent className="space-y-4">
         <div className="space-y-2">

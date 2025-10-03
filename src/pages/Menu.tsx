@@ -8,9 +8,8 @@ import { Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import moment from "moment";
 import loader from "../assets/loader.gif";
-import "../App.css"
+import "../App.css";
 
-// UI Dialog from shadcn/ui
 import {
   Dialog,
   DialogContent,
@@ -40,13 +39,15 @@ export const Menu = () => {
   const [orderToken, setOrderToken] = useState<string | null>(null);
   const [loadingMenu, setLoadingMenu] = useState<boolean>(false);
 
-  // 🔹 table selection popup
   const [openTableDialog, setOpenTableDialog] = useState(false);
   const [totalTables, setTotalTables] = useState<number>(0);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
 
+  // 🔸 NEW: Track service type (dine-in or parcel)
+  const [serviceType, setServiceType] = useState<"dine-in" | "parcel" | null>(null);
+  const [openServiceDialog, setOpenServiceDialog] = useState(true);
+
   useEffect(() => {
-    // fetch menu
     const fetchMenu = async () => {
       setLoadingMenu(true);
       const { data, error } = await supabase
@@ -61,7 +62,6 @@ export const Menu = () => {
 
     fetchMenu();
 
-    // listen to menu changes
     const subscription = supabase
       .channel("public:menu_items")
       .on(
@@ -75,12 +75,11 @@ export const Menu = () => {
   }, []);
 
   useEffect(() => {
-    // fetch total tables
     const fetchTables = async () => {
       const { data, error } = await supabase
         .from("restaurant_settings")
         .select("total_tables")
-        .eq("id", 1) // assuming single row
+        .eq("id", 1)
         .single();
 
       if (!error && data) {
@@ -112,48 +111,46 @@ export const Menu = () => {
     });
   };
 
-  // 🔹 Instead of placing order directly, open table popup
   const handlePlaceOrder = () => {
     if (orderItems.length === 0) {
       alert("Please select at least one item.");
       return;
     }
-    setOpenTableDialog(true); // open popup
+
+    if (serviceType === "dine-in") {
+      setOpenTableDialog(true);
+    } else if (serviceType === "parcel") {
+      confirmParcelOrder();
+    }
   };
 
-  const confirmOrderWithTable = async () => {
-    if (!selectedTable) {
-      alert("Please select your table number.");
-      return;
-    }
-
+  // 🔸 NEW: Place Parcel Order (no table)
+  const confirmParcelOrder = async () => {
     const token = generateOrderToken();
-
     const total = orderItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
 
-    // 1️⃣ Insert order with table number
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert([{
         token,
         status: "current",
         total,
-        table_number: selectedTable,  // ✅ store table number
+        table_number: null,    // 🔸 no table
+        service_type: "parcel", // 🔸 new column (make sure it's in DB)
         created_at: moment().format("YYYY-MM-DDTHH:mm:ss")
       }])
       .select()
       .single();
 
     if (orderError || !order) {
-      console.error("Place order error:", orderError?.message);
+      console.error("Parcel order error:", orderError?.message);
       alert("Failed to place order: " + orderError?.message);
       return;
     }
 
-    // 2️⃣ Insert order items
     const orderItemsData = orderItems.map((item) => ({
       order_id: order.id,
       menu_item_id: item.id,
@@ -170,7 +167,56 @@ export const Menu = () => {
       return;
     }
 
-    // 3️⃣ Done 🎉
+    setOrderToken(token);
+  };
+
+  const confirmOrderWithTable = async () => {
+    if (!selectedTable) {
+      alert("Please select your table number.");
+      return;
+    }
+
+    const token = generateOrderToken();
+    const total = orderItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert([{
+        token,
+        status: "current",
+        total,
+        table_number: selectedTable,
+        service_type: "dine-in", // 🔸 mark as dine-in
+        created_at: moment().format("YYYY-MM-DDTHH:mm:ss")
+      }])
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error("Place order error:", orderError?.message);
+      alert("Failed to place order: " + orderError?.message);
+      return;
+    }
+
+    const orderItemsData = orderItems.map((item) => ({
+      order_id: order.id,
+      menu_item_id: item.id,
+      quantity: item.quantity,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .insert(orderItemsData);
+
+    if (itemsError) {
+      console.error("Order items insert error:", itemsError.message);
+      alert("Failed to add order items: " + itemsError.message);
+      return;
+    }
+
     setOrderToken(token);
     setOpenTableDialog(false);
   };
@@ -179,6 +225,8 @@ export const Menu = () => {
     setOrderToken(null);
     setOrderItems([]);
     setSelectedTable(null);
+    setServiceType(null);
+    setOpenServiceDialog(true);
   };
 
   if (orderToken) {
@@ -202,7 +250,7 @@ export const Menu = () => {
         </div>
       </header>
 
-      {/* Menu & Order Summary */}
+      {/* Menu */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -210,9 +258,9 @@ export const Menu = () => {
               Our Menu
             </h2>
             {loadingMenu ? (
-               <div className="flex justify-center items-center py-10">
-    <img src={loader} alt="Loading..." className="w-24 h-24" />
-  </div>
+              <div className="flex justify-center items-center py-10">
+                <img src={loader} alt="Loading..." className="w-24 h-24" />
+              </div>
             ) : menuItems.length === 0 ? (
               <p className="text-gray-500">No menu items available.</p>
             ) : (
@@ -235,7 +283,24 @@ export const Menu = () => {
         </div>
       </div>
 
-      {/* 🔹 Table Selection Popup */}
+      {/* 🔸 Service Type Popup */}
+      <Dialog open={openServiceDialog} onOpenChange={() => {}}>
+        <DialogContent>
+          <DialogHeader>
+            <h2 className="text-lg font-semibold text-center">Choose Service Type</h2>
+          </DialogHeader>
+          <div className="flex justify-center gap-4 mt-4">
+            <Button onClick={() => { setServiceType("dine-in"); setOpenServiceDialog(false); }}>
+              Dine In
+            </Button>
+            <Button variant="outline" onClick={() => { setServiceType("parcel"); setOpenServiceDialog(false); }}>
+              Parcel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Table Selection Popup */}
       <Dialog open={openTableDialog} onOpenChange={setOpenTableDialog}>
         <DialogContent>
           <DialogHeader>

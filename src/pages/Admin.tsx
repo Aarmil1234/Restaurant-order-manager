@@ -248,14 +248,14 @@ export const Admin = () => {
       </header>
 
       {/* Add Menu Item Section */}
-      <div className="flex justify-between w-full p-4">
+      <div className="flex justify-between md:flex-row w-full p-4">
         <div className="heading">
           <h1 className="text-3xl font-bold text-restaurant-charcoal mb-2">
             Restaurant Admin Panel
           </h1>
           <p className="text-muted-foreground">Manage orders and track kitchen workflow</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
           <Link to="/add-menu">
             <Button>Add Menu Item</Button>
           </Link>
